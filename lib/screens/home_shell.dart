@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../controllers/pomodoro_controller.dart';
 import '../models/project.dart';
+import '../models/task_item.dart';
 import '../services/app_storage.dart';
 import 'focus_tab.dart';
 import 'projects_tab.dart';
@@ -10,7 +11,12 @@ import 'settings_tab.dart';
 import 'stats_tab.dart';
 
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
+  const HomeShell({
+    this.storage = const SqliteAppStorage(),
+    super.key,
+  });
+
+  final AppStorage storage;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -25,7 +31,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _controller = PomodoroController(storage: const AppStorage())
+    _controller = PomodoroController(storage: widget.storage)
       ..addListener(_onControllerChanged);
     _controller.load();
   }
@@ -136,12 +142,16 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         return FocusTab(
           controller: _controller,
           onResetRequested: _confirmResetTimer,
+          onChooseTask: _showTaskPicker,
         );
       case 1:
         return ProjectsTab(
           controller: _controller,
           onEditProject: _showProjectSheet,
           onDeleteProject: _confirmDeleteProject,
+          onAddTask: _showTaskSheet,
+          onEditTask: _showEditTaskSheet,
+          onDeleteTask: _confirmDeleteTask,
         );
       case 2:
         return StatsTab(controller: _controller);
@@ -249,6 +259,109 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _showTaskSheet(Project project) async {
+    await _showTaskEditor(project: project);
+  }
+
+  Future<void> _showEditTaskSheet(TaskItem task) async {
+    final project = _controller.projects.firstWhere(
+      (item) => item.id == task.projectId,
+      orElse: () => _controller.selectedProject,
+    );
+    await _showTaskEditor(project: project, editing: task);
+  }
+
+  Future<void> _showTaskEditor({
+    required Project project,
+    TaskItem? editing,
+  }) async {
+    final controller = TextEditingController(text: editing?.title ?? '');
+    await showCupertinoModalPopup<void>(
+      context: context,
+      builder: (context) {
+        return CupertinoActionSheet(
+          title: Text(editing == null ? 'New Task' : 'Edit Task'),
+          message: Column(
+            children: <Widget>[
+              const SizedBox(height: 12),
+              CupertinoTextField(
+                controller: controller,
+                placeholder: 'Task title',
+                padding: const EdgeInsets.all(14),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+          actions: <Widget>[
+            CupertinoActionSheetAction(
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                final title = controller.text.trim();
+                if (title.isEmpty) {
+                  navigator.pop();
+                  return;
+                }
+                await _controller.upsertTask(
+                  editing: editing,
+                  projectId: project.id,
+                  title: title,
+                );
+                if (mounted) {
+                  navigator.pop();
+                }
+              },
+              child: Text(editing == null ? 'Save Task' : 'Update Task'),
+            ),
+          ],
+          cancelButton: CupertinoActionSheetAction(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showTaskPicker() async {
+    final tasks = _controller.tasksForProject(_controller.selectedProject.id);
+    await showCupertinoModalPopup<void>(
+      context: context,
+      builder: (context) {
+        return CupertinoActionSheet(
+          title: const Text('Choose Task'),
+          actions: <Widget>[
+            CupertinoActionSheetAction(
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                await _controller.selectTask(null);
+                if (mounted) {
+                  navigator.pop();
+                }
+              },
+              child: const Text('No Task'),
+            ),
+            ...tasks.map((task) {
+              return CupertinoActionSheetAction(
+                onPressed: () async {
+                  final navigator = Navigator.of(context);
+                  await _controller.selectTask(task.id);
+                  if (mounted) {
+                    navigator.pop();
+                  }
+                },
+                child: Text(task.title),
+              );
+            }),
+          ],
+          cancelButton: CupertinoActionSheetAction(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _confirmDeleteProject(Project project) async {
     if (_controller.projects.length == 1) {
       return;
@@ -259,7 +372,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         return CupertinoAlertDialog(
           title: const Text('Delete Project?'),
           content: Text(
-            'Delete "${project.name}" and its recorded statistics?',
+            'Delete "${project.name}" with all of its tasks and sessions?',
           ),
           actions: <Widget>[
             CupertinoDialogAction(
@@ -271,6 +384,37 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
               onPressed: () async {
                 final navigator = Navigator.of(context);
                 await _controller.deleteProject(project);
+                if (mounted) {
+                  navigator.pop();
+                }
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDeleteTask(TaskItem task) async {
+    await showCupertinoDialog<void>(
+      context: context,
+      builder: (context) {
+        return CupertinoAlertDialog(
+          title: const Text('Delete Task?'),
+          content: Text(
+            'Delete "${task.title}"? Existing sessions will remain but lose their task link.',
+          ),
+          actions: <Widget>[
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                await _controller.deleteTask(task);
                 if (mounted) {
                   navigator.pop();
                 }

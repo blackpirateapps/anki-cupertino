@@ -1,13 +1,19 @@
 import 'package:flutter/cupertino.dart';
 
 import '../screens/home_shell.dart';
+import '../services/app_storage.dart';
 
 void runPomodoroApp() {
   runApp(const PomodoroApp());
 }
 
 class PomodoroApp extends StatelessWidget {
-  const PomodoroApp({super.key});
+  const PomodoroApp({
+    this.storage = const SqliteAppStorage(),
+    super.key,
+  });
+
+  final AppStorage storage;
 
   @override
   Widget build(BuildContext context) {
@@ -20,8 +26,7 @@ class PomodoroApp extends StatelessWidget {
         scaffoldBackgroundColor: Color(0xFF111216),
         barBackgroundColor: Color(0xCC16181D),
       ),
-      home: HomeShell(),
+      home: HomeShell(storage: storage),
     );
   }
 }
-

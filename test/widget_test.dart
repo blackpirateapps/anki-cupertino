@@ -1,11 +1,23 @@
 import 'package:anki_cupertino/main.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:anki_cupertino/models/persisted_snapshot.dart';
+import 'package:anki_cupertino/services/app_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _MemoryStorage extends AppStorage {
+  const _MemoryStorage();
+
+  @override
+  Future<PersistedSnapshot> readSnapshot() async {
+    return PersistedSnapshot.initial();
+  }
+
+  @override
+  Future<void> writeSnapshot(PersistedSnapshot snapshot) async {}
+}
 
 void main() {
   testWidgets('app renders main tabs', (tester) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    await tester.pumpWidget(const PomodoroApp());
+    await tester.pumpWidget(const PomodoroApp(storage: _MemoryStorage()));
     await tester.pumpAndSettle();
 
     expect(find.text('Focus'), findsWidgets);

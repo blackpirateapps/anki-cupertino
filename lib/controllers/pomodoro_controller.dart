@@ -7,6 +7,7 @@ import '../models/daily_stat.dart';
 import '../models/persisted_snapshot.dart';
 import '../models/project.dart';
 import '../models/session_record.dart';
+import '../models/task_item.dart';
 import '../models/timer_mode.dart';
 import '../models/timer_snapshot.dart';
 import '../services/app_storage.dart';
@@ -37,7 +38,11 @@ class PomodoroController extends ChangeNotifier {
   bool get isRunning => _timerSnapshot.isRunning;
   int get remainingSeconds => _timerSnapshot.remainingSeconds;
   List<Project> get projects => _appState.projects;
+  List<TaskItem> get tasks => _appState.tasks;
   List<SessionRecord> get records => _appState.records;
+  int get focusMinutes => _appState.focusMinutes;
+  int get shortBreakMinutes => _appState.shortBreakMinutes;
+  int get longBreakMinutes => _appState.longBreakMinutes;
 
   Project get selectedProject {
     return _appState.projects.firstWhere(
@@ -46,18 +51,31 @@ class PomodoroController extends ChangeNotifier {
     );
   }
 
-  int get focusMinutes => _appState.focusMinutes;
-  int get shortBreakMinutes => _appState.shortBreakMinutes;
-  int get longBreakMinutes => _appState.longBreakMinutes;
+  TaskItem? get selectedTask {
+    final selectedTaskId = _appState.selectedTaskId;
+    if (selectedTaskId == null) {
+      return null;
+    }
+    for (final task in _appState.tasks) {
+      if (task.id == selectedTaskId) {
+        return task;
+      }
+    }
+    return null;
+  }
 
   double get progress {
     final totalSeconds = (minutesForMode(timerMode) * 60).clamp(1, 86400);
     return (1 - (remainingSeconds / totalSeconds)).clamp(0.0, 1.0).toDouble();
   }
 
+  List<TaskItem> tasksForProject(String projectId) {
+    return _appState.tasks.where((task) => task.projectId == projectId).toList();
+  }
+
   Future<void> load() async {
     final snapshot = await _storage.readSnapshot();
-    _appState = snapshot.appState;
+    _appState = _normalizeAppState(snapshot.appState);
     _timerSnapshot = snapshot.timerSnapshot;
     await _restoreTimerState();
     _isLoaded = true;
@@ -142,7 +160,22 @@ class PomodoroController extends ChangeNotifier {
   }
 
   Future<void> selectProject(String projectId) async {
-    _appState = _appState.copyWith(selectedProjectId: projectId);
+    final tasks = tasksForProject(projectId);
+    _appState = _appState.copyWith(
+      selectedProjectId: projectId,
+      selectedTaskId: tasks.isNotEmpty ? tasks.first.id : null,
+      clearSelectedTaskId: tasks.isEmpty,
+    );
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> selectTask(String? taskId) async {
+    if (taskId == null) {
+      _appState = _appState.copyWith(clearSelectedTaskId: true);
+    } else {
+      _appState = _appState.copyWith(selectedTaskId: taskId);
+    }
     notifyListeners();
     await _persist();
   }
@@ -153,14 +186,11 @@ class PomodoroController extends ChangeNotifier {
     required int colorValue,
   }) async {
     if (editing == null) {
+      final id = DateTime.now().microsecondsSinceEpoch.toString();
       _appState = _appState.copyWith(
         projects: <Project>[
           ..._appState.projects,
-          Project(
-            id: DateTime.now().microsecondsSinceEpoch.toString(),
-            name: name,
-            colorValue: colorValue,
-          ),
+          Project(id: id, name: name, colorValue: colorValue),
         ],
       );
     } else {
@@ -185,16 +215,86 @@ class PomodoroController extends ChangeNotifier {
     final remainingProjects = _appState.projects
         .where((candidate) => candidate.id != project.id)
         .toList();
-    final nextSelected = _appState.selectedProjectId == project.id
+    final remainingTasks = _appState.tasks
+        .where((task) => task.projectId != project.id)
+        .toList();
+    final remainingRecords = _appState.records
+        .where((record) => record.projectId != project.id)
+        .toList();
+    final nextSelectedProjectId = _appState.selectedProjectId == project.id
         ? remainingProjects.first.id
         : _appState.selectedProjectId;
+    final nextTasks = remainingTasks
+        .where((task) => task.projectId == nextSelectedProjectId)
+        .toList();
 
     _appState = _appState.copyWith(
       projects: remainingProjects,
-      selectedProjectId: nextSelected,
-      records: _appState.records
-          .where((record) => record.projectId != project.id)
-          .toList(),
+      tasks: remainingTasks,
+      records: remainingRecords,
+      selectedProjectId: nextSelectedProjectId,
+      selectedTaskId: nextTasks.isNotEmpty ? nextTasks.first.id : null,
+      clearSelectedTaskId: nextTasks.isEmpty,
+    );
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> upsertTask({
+    TaskItem? editing,
+    required String projectId,
+    required String title,
+  }) async {
+    if (editing == null) {
+      final id = DateTime.now().microsecondsSinceEpoch.toString();
+      final task = TaskItem(id: id, projectId: projectId, title: title);
+      _appState = _appState.copyWith(tasks: <TaskItem>[..._appState.tasks, task]);
+      if (_appState.selectedProjectId == projectId &&
+          _appState.selectedTaskId == null) {
+        _appState = _appState.copyWith(selectedTaskId: id);
+      }
+    } else {
+      _appState = _appState.copyWith(
+        tasks: _appState.tasks.map((task) {
+          if (task.id != editing.id) {
+            return task;
+          }
+          return task.copyWith(title: title);
+        }).toList(),
+      );
+    }
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> deleteTask(TaskItem task) async {
+    final remainingTasks = _appState.tasks
+        .where((candidate) => candidate.id != task.id)
+        .toList();
+    final updatedRecords = _appState.records.map((record) {
+      if (record.taskId != task.id) {
+        return record;
+      }
+      return SessionRecord(
+        id: record.id,
+        projectId: record.projectId,
+        taskId: null,
+        completedAtIso: record.completedAtIso,
+        minutes: record.minutes,
+      );
+    }).toList();
+    final replacementTasks = remainingTasks
+        .where((candidate) => candidate.projectId == task.projectId)
+        .toList();
+
+    _appState = _appState.copyWith(
+      tasks: remainingTasks,
+      records: updatedRecords,
+      selectedTaskId: _appState.selectedTaskId == task.id && replacementTasks.isNotEmpty
+          ? replacementTasks.first.id
+          : _appState.selectedTaskId,
+      clearSelectedTaskId:
+          _appState.selectedTaskId == task.id && replacementTasks.isEmpty,
     );
     notifyListeners();
     await _persist();
@@ -260,12 +360,15 @@ class PomodoroController extends ChangeNotifier {
     return copy;
   }
 
+  List<TaskItem> topTasks() {
+    final copy = List<TaskItem>.from(_appState.tasks);
+    copy.sort((a, b) => b.completedMinutes.compareTo(a.completedMinutes));
+    return copy;
+  }
+
   String exportData() {
     return _storage.encodeSnapshot(
-      PersistedSnapshot(
-        appState: _appState,
-        timerSnapshot: _timerSnapshot,
-      ),
+      PersistedSnapshot(appState: _appState, timerSnapshot: _timerSnapshot),
     );
   }
 
@@ -273,7 +376,7 @@ class PomodoroController extends ChangeNotifier {
     try {
       final snapshot = _storage.decodeSnapshot(raw);
       _stopTicker();
-      _appState = snapshot.appState;
+      _appState = _normalizeAppState(snapshot.appState);
       _timerSnapshot = snapshot.timerSnapshot;
       await _restoreTimerState();
       notifyListeners();
@@ -298,7 +401,8 @@ class PomodoroController extends ChangeNotifier {
 
   Future<void> _restoreTimerState() async {
     if (!_timerSnapshot.isRunning || _timerSnapshot.endTime == null) {
-      _timerSnapshot = _timerSnapshot.copyWith(isRunning: false, clearEndTime: true);
+      _timerSnapshot =
+          _timerSnapshot.copyWith(isRunning: false, clearEndTime: true);
       return;
     }
 
@@ -356,9 +460,20 @@ class PomodoroController extends ChangeNotifier {
           completedMinutes: project.completedMinutes + completedMinutes,
         );
       }).toList();
+      final updatedTasks = _appState.tasks.map((task) {
+        if (task.id != _appState.selectedTaskId) {
+          return task;
+        }
+        return task.copyWith(
+          completedSessions: task.completedSessions + 1,
+          completedMinutes: task.completedMinutes + completedMinutes,
+        );
+      }).toList();
       final updatedRecords = <SessionRecord>[
         SessionRecord(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
           projectId: _appState.selectedProjectId,
+          taskId: _appState.selectedTaskId,
           completedAtIso: DateTime.now().toIso8601String(),
           minutes: completedMinutes,
         ),
@@ -369,6 +484,7 @@ class PomodoroController extends ChangeNotifier {
           nextCycles % 4 == 0 ? TimerMode.longBreak : TimerMode.shortBreak;
       _appState = _appState.copyWith(
         projects: updatedProjects,
+        tasks: updatedTasks,
         records: updatedRecords,
       );
       _timerSnapshot = _timerSnapshot.copyWith(
@@ -378,9 +494,14 @@ class PomodoroController extends ChangeNotifier {
         focusCycles: nextCycles,
         clearEndTime: true,
       );
-      _pendingAlert = fromRestore
-          ? 'Focus session finished while the app was closed. Break time.'
-          : 'Session complete. Break time.';
+      final taskName = selectedTask?.title;
+      _pendingAlert = taskName == null
+          ? fromRestore
+              ? 'Focus session finished while the app was closed. Break time.'
+              : 'Session complete. Break time.'
+          : fromRestore
+              ? 'Task "$taskName" got a completed focus session while the app was closed. Break time.'
+              : 'Task "$taskName" logged a focus session. Break time.';
     } else {
       _timerSnapshot = _timerSnapshot.copyWith(
         mode: TimerMode.focus,
@@ -399,11 +520,28 @@ class PomodoroController extends ChangeNotifier {
 
   Future<void> _persist() {
     return _storage.writeSnapshot(
-      PersistedSnapshot(
-        appState: _appState,
-        timerSnapshot: _timerSnapshot,
-      ),
+      PersistedSnapshot(appState: _appState, timerSnapshot: _timerSnapshot),
+    );
+  }
+
+  AppState _normalizeAppState(AppState state) {
+    final selectedProjectId = state.projects.any(
+      (project) => project.id == state.selectedProjectId,
+    )
+        ? state.selectedProjectId
+        : state.projects.first.id;
+    final projectTasks =
+        state.tasks.where((task) => task.projectId == selectedProjectId).toList();
+    final selectedTaskId = state.selectedTaskId != null &&
+            projectTasks.any((task) => task.id == state.selectedTaskId)
+        ? state.selectedTaskId
+        : projectTasks.isNotEmpty
+            ? projectTasks.first.id
+            : null;
+    return state.copyWith(
+      selectedProjectId: selectedProjectId,
+      selectedTaskId: selectedTaskId,
+      clearSelectedTaskId: selectedTaskId == null,
     );
   }
 }
-

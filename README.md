@@ -6,8 +6,10 @@ A lightweight Cupertino-themed Pomodoro app built with Flutter.
 
 - Pure Cupertino UI
 - Project-based focus sessions
+- Task lists inside each project
+- Focus sessions can be attached to a task
 - Daily and weekly statistics
-- Persistent local storage with `shared_preferences`
+- Persistent local storage with SQLite
 - GitHub Actions workflow that builds a release APK artifact
 
 ## Build
@@ -26,4 +28,3 @@ The release APK is uploaded as a workflow artifact on pushes to `main` and on ma
 
 - [AI_HANDOFF.md](AI_HANDOFF.md) captures the current repo structure, behavior, and next-risk areas.
 - [AGENTS.md](AGENTS.md) gives future AI agents repo-specific working rules.
-

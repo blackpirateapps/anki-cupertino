@@ -73,7 +73,7 @@ class SettingsTab extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Export your projects, statistics, and timer state as JSON, or import a saved snapshot.',
+                'Export your projects, tasks, statistics, and timer state as JSON, or import a saved snapshot.',
                 style: TextStyle(
                   color: CupertinoColors.systemGrey2,
                   fontSize: 14,
@@ -142,4 +142,3 @@ class _DurationSlider extends StatelessWidget {
     );
   }
 }
-

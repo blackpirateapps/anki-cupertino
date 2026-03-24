@@ -122,6 +122,42 @@ class StatsTab extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 18),
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text(
+                'Top Tasks',
+                style: TextStyle(
+                  color: CupertinoColors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 14),
+              ...controller.topTasks().take(6).map((task) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          task.title,
+                          style: const TextStyle(color: CupertinoColors.white),
+                        ),
+                      ),
+                      Text(
+                        '${task.completedMinutes} min',
+                        style: const TextStyle(color: CupertinoColors.systemGrey),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -162,10 +198,7 @@ class _StatBar extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: <Color>[
-                    color,
-                    color.withValues(alpha: 0.4),
-                  ],
+                  colors: <Color>[color, color.withValues(alpha: 0.4)],
                 ),
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -202,4 +235,3 @@ class _StatBar extends StatelessWidget {
     }
   }
 }
-

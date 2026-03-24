@@ -10,11 +10,13 @@ class FocusTab extends StatelessWidget {
   const FocusTab({
     required this.controller,
     required this.onResetRequested,
+    required this.onChooseTask,
     super.key,
   });
 
   final PomodoroController controller;
   final Future<void> Function() onResetRequested;
+  final Future<void> Function() onChooseTask;
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +69,14 @@ class FocusTab extends StatelessWidget {
                       style: TextStyle(
                         color: controller.selectedProject.color,
                         fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      controller.selectedTask?.title ?? 'No task selected',
+                      style: const TextStyle(
+                        color: CupertinoColors.systemGrey2,
+                        fontSize: 14,
                       ),
                     ),
                   ],
@@ -143,6 +153,33 @@ class FocusTab extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 16),
+              const Text(
+                'Task',
+                style: TextStyle(
+                  color: CupertinoColors.systemGrey,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: onChooseTask,
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        controller.selectedTask?.title ?? 'Choose task',
+                        style: const TextStyle(
+                          color: CupertinoColors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    const Icon(CupertinoIcons.chevron_down),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: <Widget>[
                   MetricTile(
@@ -163,4 +200,3 @@ class FocusTab extends StatelessWidget {
     );
   }
 }
-
