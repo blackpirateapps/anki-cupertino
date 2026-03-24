@@ -43,14 +43,14 @@ class ProjectDetailPage extends StatelessWidget {
           children: <Widget>[
             CupertinoButton(
               padding: EdgeInsets.zero,
-              minimumSize: 0,
+              minimumSize: Size.zero,
               onPressed: () => onEditProject(project),
               child: const Icon(CupertinoIcons.pencil, size: 20),
             ),
             const SizedBox(width: 10),
             CupertinoButton(
               padding: EdgeInsets.zero,
-              minimumSize: 0,
+              minimumSize: Size.zero,
               onPressed: () => onAddTask(project),
               child: const Icon(CupertinoIcons.add_circled, size: 20),
             ),
@@ -326,14 +326,14 @@ class _TaskManagerTile extends StatelessWidget {
               else ...<Widget>[
                 CupertinoButton(
                   padding: EdgeInsets.zero,
-                  minimumSize: 0,
+                  minimumSize: Size.zero,
                   onPressed: onEdit,
                   child: const Icon(CupertinoIcons.pencil, size: 20),
                 ),
                 const SizedBox(width: 12),
                 CupertinoButton(
                   padding: EdgeInsets.zero,
-                  minimumSize: 0,
+                  minimumSize: Size.zero,
                   onPressed: onDelete,
                   child: const Icon(
                     CupertinoIcons.delete,
