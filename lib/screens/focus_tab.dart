@@ -20,6 +20,7 @@ class FocusTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLocked = controller.isRunning;
     final minutes =
         (controller.remainingSeconds ~/ 60).toString().padLeft(2, '0');
     final seconds =
@@ -43,7 +44,7 @@ class FocusTab extends StatelessWidget {
                     ),
                 },
                 onValueChanged: (mode) {
-                  if (mode != null) {
+                  if (!isLocked && mode != null) {
                     controller.setTimerMode(mode);
                   }
                 },
@@ -98,12 +99,14 @@ class FocusTab extends StatelessWidget {
                 min: 1,
                 max: 90,
                 divisions: 89,
-                onChanged: (value) {
-                  controller.setModeMinutes(
-                    controller.timerMode,
-                    value.round(),
-                  );
-                },
+                onChanged: isLocked
+                    ? null
+                    : (value) {
+                        controller.setModeMinutes(
+                          controller.timerMode,
+                          value.round(),
+                        );
+                      },
               ),
               const SizedBox(height: 12),
               Row(
@@ -147,7 +150,7 @@ class FocusTab extends StatelessWidget {
                     ),
                 },
                 onValueChanged: (projectId) {
-                  if (projectId != null) {
+                  if (!isLocked && projectId != null) {
                     controller.selectProject(projectId);
                   }
                 },
@@ -163,7 +166,7 @@ class FocusTab extends StatelessWidget {
               const SizedBox(height: 8),
               CupertinoButton(
                 padding: EdgeInsets.zero,
-                onPressed: onChooseTask,
+                onPressed: isLocked ? null : onChooseTask,
                 child: Row(
                   children: <Widget>[
                     Expanded(

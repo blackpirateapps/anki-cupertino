@@ -14,6 +14,7 @@ The repo does not check in generated platform folders. GitHub Actions recreates 
 - Project creation, editing, and deletion
 - Tasks can be created inside each project
 - Focus sessions can be associated with the currently selected task or logged without a task
+- While a timer is running, timer mode, project, task, and active-mode minute changes are intentionally locked
 - Confirmation dialogs for timer reset and project deletion
 - Adjustable timer durations from the focus screen and from settings
 - Session completion tracking
