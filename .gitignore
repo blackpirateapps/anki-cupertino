@@ -1,0 +1,15 @@
+/.dart_tool/
+/.flutter-plugins
+/.flutter-plugins-dependencies
+/.metadata
+/build/
+/coverage/
+/android/
+/ios/
+/linux/
+/macos/
+/web/
+/windows/
+.idea/
+*.iml
+
