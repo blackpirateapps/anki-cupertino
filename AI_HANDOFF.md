@@ -12,8 +12,10 @@ The repo does not check in generated platform folders. GitHub Actions recreates 
 - Running timer survives tab changes, app backgrounding, and app removal from recents by persisting wall-clock end time
 - Project selection with per-project colors
 - Project creation, editing, and deletion
+- Each project now opens its own detail page with project totals and a dedicated task-manager-style task list
 - Tasks can be created inside each project
 - Focus sessions can be associated with the currently selected task or logged without a task
+- Task selection from the focus screen now routes through the selected project's detail page instead of a flat action sheet
 - While a timer is running, timer mode, project, task, and active-mode minute changes are intentionally locked
 - Confirmation dialogs for timer reset and project deletion
 - Adjustable timer durations from the focus screen and from settings
@@ -34,6 +36,7 @@ The repo does not check in generated platform folders. GitHub Actions recreates 
 - `lib/models/`: app, timer, project, task, and persistence models
 - `lib/services/app_storage.dart`: SQLite storage adapter and JSON import/export codec helpers
 - `lib/screens/`: tab UI and main shell
+- `lib/screens/project_detail_page.dart`: per-project page used for project management and focus-task selection
 - `lib/screens/stats_tab.dart`: `fl_chart`-based daily/weekly/monthly chart UI
 - `lib/widgets/`: shared presentational widgets
 - `pubspec.yaml`: Flutter package metadata and dependencies

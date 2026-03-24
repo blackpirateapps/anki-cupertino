@@ -6,6 +6,7 @@ import '../models/project.dart';
 import '../models/task_item.dart';
 import '../services/app_storage.dart';
 import 'focus_tab.dart';
+import 'project_detail_page.dart';
 import 'projects_tab.dart';
 import 'settings_tab.dart';
 import 'stats_tab.dart';
@@ -147,11 +148,9 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       case 1:
         return ProjectsTab(
           controller: _controller,
+          onOpenProject: _openProjectPage,
           onEditProject: _showProjectSheet,
           onDeleteProject: _confirmDeleteProject,
-          onAddTask: _showTaskSheet,
-          onEditTask: _showEditTaskSheet,
-          onDeleteTask: _confirmDeleteTask,
         );
       case 2:
         return StatsTab(controller: _controller);
@@ -323,42 +322,41 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   }
 
   Future<void> _showTaskPicker() async {
-    final tasks = _controller.tasksForProject(_controller.selectedProject.id);
-    await showCupertinoModalPopup<void>(
-      context: context,
-      builder: (context) {
-        return CupertinoActionSheet(
-          title: const Text('Choose Task'),
-          actions: <Widget>[
-            CupertinoActionSheetAction(
-              onPressed: () async {
-                final navigator = Navigator.of(context);
-                await _controller.selectTask(null);
-                if (mounted) {
-                  navigator.pop();
-                }
-              },
-              child: const Text('No Task'),
-            ),
-            ...tasks.map((task) {
-              return CupertinoActionSheetAction(
-                onPressed: () async {
-                  final navigator = Navigator.of(context);
-                  await _controller.selectTask(task.id);
-                  if (mounted) {
-                    navigator.pop();
-                  }
-                },
-                child: Text(task.title),
+    await _openProjectPage(
+      _controller.selectedProject,
+      isTaskSelection: true,
+    );
+  }
+
+  Future<void> _openProjectPage(
+    Project project, {
+    bool isTaskSelection = false,
+  }) async {
+    await Navigator.of(context).push(
+      CupertinoPageRoute<void>(
+        builder: (context) {
+          return ListenableBuilder(
+            listenable: _controller,
+            builder: (context, _) {
+              final currentProject = _controller.projects.firstWhere(
+                (item) => item.id == project.id,
+                orElse: () => project,
               );
-            }),
-          ],
-          cancelButton: CupertinoActionSheetAction(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        );
-      },
+              return ProjectDetailPage(
+                controller: _controller,
+                project: currentProject,
+                isTaskSelection: isTaskSelection,
+                onSelectTask: (task) => _controller.selectTask(task?.id),
+                onEditProject: _showProjectSheet,
+                onDeleteProject: _confirmDeleteProject,
+                onAddTask: _showTaskSheet,
+                onEditTask: _showEditTaskSheet,
+                onDeleteTask: _confirmDeleteTask,
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
