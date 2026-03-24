@@ -10,6 +10,7 @@ These instructions are for future AI agents working in this repository.
 - Keep the repository lightweight. Do not commit generated platform directories unless the user explicitly changes that policy.
 - When changing the APK workflow, keep `flutter analyze` before the release build.
 - Treat GitHub Actions as the canonical build path because local Flutter tooling may be unavailable on weak machines.
+- Preserve restart-safe timer behavior by persisting absolute timer end time, not only the remaining seconds.
 
 ## Code Expectations
 
@@ -20,7 +21,7 @@ These instructions are for future AI agents working in this repository.
 
 ## Working Notes
 
-- Main app logic currently lives in `lib/main.dart`.
+- Main app logic is centered in `lib/controllers/pomodoro_controller.dart`.
+- UI is split across `lib/screens/` and `lib/widgets/`.
 - CI lives in `.github/workflows/build-release-apk.yml`.
 - If you cannot run Flutter locally, say so clearly and rely on CI validation instead of guessing.
-
