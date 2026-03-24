@@ -18,7 +18,8 @@ The repo does not check in generated platform folders. GitHub Actions recreates 
 - Confirmation dialogs for timer reset and project deletion
 - Adjustable timer durations from the focus screen and from settings
 - Session completion tracking
-- Daily and weekly minute summaries
+- Daily, weekly, and monthly chart views in stats
+- Daily stats use a project pie chart, and weekly/monthly stats use `fl_chart` bar charts
 - Seven-day chart and top-project ranking
 - Top-task statistics
 - Settings tab with import/export of a full JSON snapshot
@@ -33,6 +34,7 @@ The repo does not check in generated platform folders. GitHub Actions recreates 
 - `lib/models/`: app, timer, project, task, and persistence models
 - `lib/services/app_storage.dart`: SQLite storage adapter and JSON import/export codec helpers
 - `lib/screens/`: tab UI and main shell
+- `lib/screens/stats_tab.dart`: `fl_chart`-based daily/weekly/monthly chart UI
 - `lib/widgets/`: shared presentational widgets
 - `pubspec.yaml`: Flutter package metadata and dependencies
 - `.github/workflows/build-release-apk.yml`: CI workflow that generates Android scaffolding, analyzes, and builds the release APK

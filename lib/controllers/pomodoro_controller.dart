@@ -354,6 +354,49 @@ class PomodoroController extends ChangeNotifier {
     });
   }
 
+  List<DailyStat> monthlyStats() {
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    return List<DailyStat>.generate(daysInMonth, (index) {
+      final day = DateTime(now.year, now.month, index + 1);
+      final minutes = _appState.records
+          .where((record) {
+            final date = record.completedAt;
+            return date.year == day.year &&
+                date.month == day.month &&
+                date.day == day.day;
+          })
+          .fold<int>(0, (sum, record) => sum + record.minutes);
+      return DailyStat(day: day, minutes: minutes);
+    });
+  }
+
+  Map<Project, int> todayProjectBreakdown() {
+    final now = DateTime.now();
+    final totalsByProject = <String, int>{};
+    for (final record in _appState.records) {
+      final date = record.completedAt;
+      if (date.year == now.year &&
+          date.month == now.month &&
+          date.day == now.day) {
+        totalsByProject.update(
+          record.projectId,
+          (value) => value + record.minutes,
+          ifAbsent: () => record.minutes,
+        );
+      }
+    }
+
+    final result = <Project, int>{};
+    for (final project in _appState.projects) {
+      final minutes = totalsByProject[project.id];
+      if (minutes != null && minutes > 0) {
+        result[project] = minutes;
+      }
+    }
+    return result;
+  }
+
   List<Project> topProjects() {
     final copy = List<Project>.from(_appState.projects);
     copy.sort((a, b) => b.completedMinutes.compareTo(a.completedMinutes));
