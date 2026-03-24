@@ -426,9 +426,10 @@ class _PomodoroHomePageState extends State<PomodoroHomePage> {
           actions: <Widget>[
             CupertinoActionSheetAction(
               onPressed: () async {
+                final navigator = Navigator.of(context);
                 final name = controller.text.trim();
                 if (name.isEmpty) {
-                  Navigator.of(context).pop();
+                  navigator.pop();
                   return;
                 }
                 if (editing == null) {
@@ -459,7 +460,7 @@ class _PomodoroHomePageState extends State<PomodoroHomePage> {
                 if (mounted) {
                   setState(() {});
                 }
-                Navigator.of(context).pop();
+                navigator.pop();
               },
               child: Text(editing == null ? 'Save Project' : 'Update Project'),
             ),
@@ -874,7 +875,7 @@ class _PomodoroHomePageState extends State<PomodoroHomePage> {
                                   end: Alignment.topCenter,
                                   colors: <Color>[
                                     _selectedProject.color,
-                                    _selectedProject.color.withOpacity(0.4),
+                                    _selectedProject.color.withValues(alpha: 0.4),
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(16),
@@ -1121,7 +1122,7 @@ class _ProgressRingPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     final progressPaint = Paint()
       ..shader = RadialGradient(
-        colors: <Color>[color, color.withOpacity(0.45)],
+        colors: <Color>[color, color.withValues(alpha: 0.45)],
       ).createShader(Rect.fromCircle(center: center, radius: radius))
       ..strokeWidth = 14
       ..style = PaintingStyle.stroke
